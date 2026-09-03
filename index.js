@@ -52,10 +52,12 @@ async function run() {
 }
 run().catch(console.dir);
 
+
 // Root Route
 app.get("/", (req, res) => {
   res.send("Cafe Boss Restaurant Server is running...");
 });
+
 
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
