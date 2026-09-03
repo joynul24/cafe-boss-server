@@ -10,7 +10,11 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 app.use(express.json());
 
 // MongoDB Connection URI
@@ -27,7 +31,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server
-    await client.connect();
+    // await client.connect();
 
     const menuCollection = client.db("cafe-boss-BD").collection("menu");
     const reviewsCollection = client.db("cafe-boss-BD").collection("reviews");
