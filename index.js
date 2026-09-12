@@ -77,6 +77,28 @@ app.get("/reviews", async (req, res) => {
   }
 });
 
+// Cart Collection
+app.post("/carts", async(req, res)=>{
+  const cartItem = req.body;
+  const database = await connectDB();
+  const cartsCollection = database.collection("carts");
+  const result = await cartsCollection.insertOne(cartItem);
+  res.send(result)
+})
+
+app.get("/carts", async(req, res)=> {
+  try{
+    const database = await connectDB()
+    const cartsCollection = database.collection("carts");
+    const result = await cartsCollection.find().toArray();
+    res.send(result)
+  }
+  catch (error) {
+    console.error("Error fetching carts:", error);
+    res.status(500).send({ message: "Failed to fetch reviews" });
+  }
+})
+
 // Export for Vercel Serverless
 module.exports = app;
 
