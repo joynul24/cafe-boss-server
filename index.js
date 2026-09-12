@@ -88,9 +88,14 @@ app.post("/carts", async(req, res)=>{
 
 app.get("/carts", async(req, res)=> {
   try{
-    const database = await connectDB()
+    const email = req.query.email;
+    if (!email) {
+      return res.send([]);
+    }
+    const query = {email: email}
+    const database = await connectDB();
     const cartsCollection = database.collection("carts");
-    const result = await cartsCollection.find().toArray();
+    const result = await cartsCollection.find(query).toArray();
     res.send(result)
   }
   catch (error) {
