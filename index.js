@@ -51,6 +51,20 @@ app.get("/", (req, res) => {
   res.send("Cafe Boss Restaurant Server is running...");
 });
 
+// Admin Related APIs
+app.get("/users/admin/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { email: email };
+  const database = await connectDB();
+  const usersCollection = await database.collection("users");
+  const user = await usersCollection.findOne(query);
+  let admin = false;
+  if (user) {
+    admin = user?.role === "admin";
+  }
+  res.send({ admin });
+});
+
 // Menu Route
 app.get("/menu", async (req, res) => {
   try {
@@ -63,6 +77,41 @@ app.get("/menu", async (req, res) => {
     res.status(500).send({ message: "Failed to fetch menu items" });
   }
 });
+
+// User Related APIs
+// POST: Save or update user in MongoDB
+app.post('/users', async (req, res) => {
+  const user = req.body;
+  const query = { email: user.email };
+  const database = await connectDB();
+  const usersCollection = await database.collection("users");
+  // Checking if user already exists
+  const existingUser = await usersCollection.findOne(query);
+  if (existingUser) {
+    return res.send({ message: 'User already exists', insertedId: null });
+  }
+
+  const result = await usersCollection.insertOne(user);
+  res.send(result);
+});
+
+
+app.get("/users", async (req, res) => {
+  const database = await connectDB();
+  const usersCollection = await database.collection("users");
+  const result = await usersCollection.find().toArray();
+  res.send(result);
+})
+
+app.delete("/users/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const database = await connectDB();
+  const usersCollection = await database.collection("users");
+  const result = await usersCollection.deleteOne(query);
+  res.send(result);
+})
+
 
 // Reviews Route
 app.get("/reviews", async (req, res) => {
