@@ -19,7 +19,7 @@ app.use(
       "http://localhost:5173",
       "http://localhost:3000",
     ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
 );
@@ -64,6 +64,27 @@ app.get("/users/admin/:email", async (req, res) => {
   }
   res.send({ admin });
 });
+
+
+// Make Admin API Endpoint
+app.patch('/users/admin/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const updatedDoc = {
+      $set: {
+        role: 'admin'
+      }
+    };
+    const database = await connectDB();
+    const usersCollection = await database.collection("users");
+    const result = await usersCollection.updateOne(filter, updatedDoc);
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to update user role", error: error.message });
+  }
+});
+
 
 // Menu Route
 app.get("/menu", async (req, res) => {
