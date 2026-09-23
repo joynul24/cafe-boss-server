@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -46,13 +47,52 @@ async function connectDB() {
   return db;
 }
 
+// JWT reletd API
+app.post("/jwt", async (req, res) => {
+  const user = req.body;
+  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h" });
+  res.send({ token });
+})
+
+// Middlewares
+const verifyToken = (req, res, next) => {
+  // console.log("inside access-token", req.headers);
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "unauthorized access" })
+  }
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" })
+    }
+    req.decoded = decoded;
+    next()
+  })
+}
+
+
+const verifyAdmin = async (req, res, next) => {
+  const email = req.decoded?.email;
+  const query = { email: email };
+  const database = await connectDB();
+  const usersCollection = database.collection("users");
+  const user = await usersCollection.findOne(query);
+
+  const isAdmin = user?.role === "admin";
+  if (!isAdmin) {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
+
+
 // Root Route
 app.get("/", (req, res) => {
   res.send("Cafe Boss Restaurant Server is running...");
 });
 
 // Admin Related APIs
-app.get("/users/admin/:email", async (req, res) => {
+app.get("/users/admin/:email", verifyToken, async (req, res) => {
   const email = req.params.email;
   const query = { email: email };
   const database = await connectDB();
@@ -67,7 +107,7 @@ app.get("/users/admin/:email", async (req, res) => {
 
 
 // Make Admin API Endpoint
-app.patch('/users/admin/:id', async (req, res) => {
+app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id) };
@@ -82,6 +122,88 @@ app.patch('/users/admin/:id', async (req, res) => {
     res.send(result);
   } catch (error) {
     res.status(500).send({ message: "Failed to update user role", error: error.message });
+  }
+});
+
+
+// Single menu item delete API
+app.delete("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const database = await connectDB();
+  const menuCollection = await database.collection("menu");
+  const result = await menuCollection.deleteOne(query);
+  res.send(result)
+})
+
+
+// Update a menu item
+app.patch("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const item = req.body;
+
+    const filter = {
+      $or: [
+        { _id: id },
+        ...(ObjectId.isValid(id) ? [{ _id: new ObjectId(id) }] : [])
+      ]
+    };
+
+    const updatedDoc = {
+      $set: {
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        recipe: item.recipe,
+        image: item.image
+      }
+    };
+
+    const database = await connectDB();
+    const menuCollection = database.collection("menu");
+
+    const result = await menuCollection.updateOne(filter, updatedDoc);
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Update failed", error: error.message });
+  }
+});
+
+
+// Get single menu item API
+app.get("/menu/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const database = await connectDB();
+    const menuCollection = database.collection("menu");
+    const query = {
+      $or: [
+        { _id: id },
+        ...(ObjectId.isValid(id) ? [{ _id: new ObjectId(id) }] : [])
+      ]
+    };
+    const result = await menuCollection.findOne(query);
+    if (!result) {
+      return res.status(404).send({ message: "Data not found" });
+    }
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: error.message });
+  }
+});
+
+
+// Add Menu Item API Endpoint
+app.post("/menu", verifyToken,verifyAdmin, async (req, res) => {
+  try {
+    const item = req.body;
+    const database = await connectDB();
+    const menuCollection = database.collection("menu");
+    const result = await menuCollection.insertOne(item);
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to add menu item", error: error.message });
   }
 });
 
@@ -117,7 +239,7 @@ app.post('/users', async (req, res) => {
 });
 
 
-app.get("/users", async (req, res) => {
+app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
   const database = await connectDB();
   const usersCollection = await database.collection("users");
   const result = await usersCollection.find().toArray();
