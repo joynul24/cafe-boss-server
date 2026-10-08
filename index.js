@@ -248,6 +248,36 @@ app.post("/payments", verifyToken, async (req, res) => {
 });
 
 
+// Get all payment history (Admin only)
+app.get('/payments', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const database = await connectDB();
+    const paymentsCollection = database.collection('payments');
+    // Sort by date descending (Newest first)
+    const result = await paymentsCollection.find().sort({ date: -1 }).toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to fetch all payments history' });
+  }
+});
+
+
+// Delete a payment record (Admin only)
+app.delete('/payments/:id', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const database = await connectDB();
+    const paymentsCollection = database.collection('payments');
+
+    const result = await paymentsCollection.deleteOne(query);
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to delete payment record' });
+  }
+});
+
+
 
 // Single menu item delete API
 app.delete("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
