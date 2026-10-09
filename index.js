@@ -431,6 +431,18 @@ app.post("/carts", async (req, res) => {
   res.send(result)
 })
 
+// Get all cart items (Admin only)
+app.get('/carts', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const database = await connectDB();
+    const cartsCollection = database.collection('carts');
+    const result = await cartsCollection.find().toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to fetch cart data' });
+  }
+});
+
 app.get("/carts", async (req, res) => {
   try {
     const email = req.query.email;
