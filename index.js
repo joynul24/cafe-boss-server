@@ -431,35 +431,29 @@ app.post("/carts", async (req, res) => {
   res.send(result)
 })
 
-// Get all cart items (Admin only)
-app.get('/carts', verifyToken, verifyAdmin, async (req, res) => {
+// Get cart items (User specific by email or all items)
+app.get('/carts', verifyToken, async (req, res) => {
   try {
+    const email = req.query.email;
     const database = await connectDB();
     const cartsCollection = database.collection('carts');
-    const result = await cartsCollection.find().toArray();
+
+    let query = {};
+    if (email) {
+      if (req.decoded.email !== email) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      query = { email: email };
+    }
+
+    const result = await cartsCollection.find(query).toArray();
     res.send(result);
   } catch (error) {
+    console.error("Error fetching carts:", error);
     res.status(500).send({ message: 'Failed to fetch cart data' });
   }
 });
 
-app.get("/carts", async (req, res) => {
-  try {
-    const email = req.query.email;
-    if (!email) {
-      return res.send([]);
-    }
-    const query = { email: email }
-    const database = await connectDB();
-    const cartsCollection = database.collection("carts");
-    const result = await cartsCollection.find(query).toArray();
-    res.send(result)
-  }
-  catch (error) {
-    console.error("Error fetching carts:", error);
-    res.status(500).send({ message: "Failed to fetch reviews" });
-  }
-})
 
 app.delete("/carts/:id", async (req, res) => {
   try {
