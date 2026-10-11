@@ -477,6 +477,29 @@ app.delete("/carts/:id", async (req, res) => {
 });
 
 
+
+app.get("/reservations/:email", verifyToken, async (req, res) => {
+  try {
+    const email = req.params.email;
+    const query = { email: email };
+
+    const database = await connectDB();
+    const reservationCollection = database.collection("reservations");
+
+    const result = await reservationCollection.find(query).toArray();
+
+    res.send(result);
+  } catch (error) {
+    console.error("Error fetching reservations by email:", error);
+    res.status(500).send({
+      message: "Failed to fetch reservations",
+      error: error.message
+    });
+  }
+});
+
+
+
 // Get all bookings (Admin area)
 app.get('/reservations', verifyToken, verifyAdmin, async (req, res) => {
   try {
@@ -521,26 +544,6 @@ app.post("/reservations", verifyToken, async (req, res) => {
     res.send(result);
   } catch (error) {
     res.status(500).send({ message: "Failed to book table", error: error.message });
-  }
-});
-
-app.get("/reservations/:email", verifyToken, async (req, res) => {
-  try {
-    const email = req.params.email;
-    const query = { email: email };
-
-    const database = await connectDB();
-    const reservationCollection = database.collection("reservations");
-
-    const result = await reservationCollection.find(query).toArray();
-
-    res.send(result);
-  } catch (error) {
-    console.error("Error fetching reservations by email:", error);
-    res.status(500).send({
-      message: "Failed to fetch reservations",
-      error: error.message
-    });
   }
 });
 
